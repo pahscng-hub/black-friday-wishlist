@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Wishlist — Black Friday 2026 · v10.2.0</title>
+<title>Wishlist — Black Friday 2026 · v10.3.0</title>
 <style>
 :root{--bg:#f5f5f7;--card:#fff;--ink:#1d1d1f;--muted:#77777d;--line:#e6e6eb;--blue:#0071e3;--green:#18864b;--red:#c93434;--shadow:0 8px 28px rgba(20,20,35,.055)}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif}button,input,select,textarea{font:inherit}input,select,textarea{color:var(--ink);color-scheme:light}input::placeholder,textarea::placeholder{color:#8a8a91;opacity:1}input:-webkit-autofill{-webkit-text-fill-color:var(--ink);box-shadow:0 0 0 1000px #fff inset}button{cursor:pointer;border:0;border-radius:999px;padding:10px 15px;font-weight:600;transition:.15s}button:hover{filter:brightness(.96);transform:translateY(-1px)}.primary{background:var(--blue);color:white}.secondary{background:#ececf0;color:var(--ink)}.quiet{background:transparent;color:var(--blue);padding:7px 8px}.danger{background:#fff0f0;color:var(--red)}a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
@@ -19,7 +19,7 @@
 <body>
 <div class="shell">
 <header class="top">
- <div><div class="eyebrow">Your personal shopping planner · 2026</div><h1>Black Friday Wishlist<span style="color:var(--blue)">.</span></h1><p class="subtitle">Track original prices, check current prices, and compare offers across the web.</p><div class="version-label" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:4px 9px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font-size:11px;font-weight:650">APP VERSION <strong style="color:var(--blue)">10.0.0</strong> · PRICE TRACKING</div></div>
+ <div><div class="eyebrow">Your personal shopping planner · 2026</div><h1>Black Friday Wishlist<span style="color:var(--blue)">.</span></h1><p class="subtitle">Track original prices, check current prices, and compare offers across the web.</p><div class="version-label" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:4px 9px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font-size:11px;font-weight:650">APP VERSION <strong style="color:var(--blue)">10.3.0</strong> · PRICE TRACKING</div></div>
  <div class="top-actions"><button class="secondary" id="searchBtn">⌕ Search products</button><button class="secondary" id="importBtn">Import Excel</button><button class="primary" id="addBtn">＋ Add product</button><input type="file" id="importFile" accept=".xlsx,.xls,.csv" hidden></div>
 </header>
 <div id="workerServiceConfig" hidden aria-hidden="true">
@@ -84,8 +84,18 @@
 (function(){
 const $=id=>document.getElementById(id), money=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(n)||0), today=()=>new Date().toISOString().slice(0,10);
 let budget=1500,items=[],activeFilter='all',offersDraft=[];
-try{budget=Number(localStorage.getItem('bfw_budget'))||1500;items=JSON.parse(localStorage.getItem('bfw_items')||'[]')}catch(e){}
-function persist(){localStorage.setItem('bfw_budget',String(budget));localStorage.setItem('bfw_items',JSON.stringify(items))}
+// Restore saved data defensively before the first render. Never overwrite a non-empty
+// saved list with an empty one if storage is temporarily unavailable.
+function readSavedItems(){
+  const keys=['bfw_items','black_friday_wishlist_items','wishlist_items'];
+  for(const key of keys){
+    try{const raw=localStorage.getItem(key);if(raw){const parsed=JSON.parse(raw);if(Array.isArray(parsed))return parsed;}}
+    catch(e){console.warn('Could not read wishlist storage key:',key,e)}
+  }
+  return [];
+}
+try{budget=Number(localStorage.getItem('bfw_budget'))||1500;items=readSavedItems()}catch(e){console.warn('Wishlist storage unavailable on startup',e)}
+function persist(){try{localStorage.setItem('bfw_budget',String(budget));localStorage.setItem('bfw_items',JSON.stringify(items))}catch(e){console.error('Could not save wishlist data',e);toast('Browser storage is unavailable. Export a backup before closing.')}}
 let workerUrl='https://wishlist-price-lookup.pahscng.workers.dev';
 function workerEndpoint(params){if(!workerUrl)return '';const base=workerUrl.replace(/\/+$/,'');return base+'/?'+new URLSearchParams(params).toString()}
 function setWorkerStatus(message,ok=false){const el=$('workerConfigStatus');if(el){el.textContent=message;el.style.color=ok?'var(--green)':'var(--muted)'}}
@@ -251,6 +261,10 @@ function downloadBlob(content,name,type){let a=document.createElement('a'),u=URL
 $('importFile').onchange=async e=>{let file=e.target.files[0];if(!file)return;try{let data;if(window.XLSX){let wb=XLSX.read(await file.arrayBuffer(),{type:'array'});let rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames.includes('Wishlist')?'Wishlist':wb.SheetNames[0]]);data=rows.map(r=>({id:String(Date.now())+Math.random().toString(16).slice(2,7),name:r.Name||r.name||r.Product||'',category:r.Category||r.category||'Other',priority:({Low:1,Medium:2,High:3}[r.Priority]||Number(r.priority)||1),createdAt:Date.now(),image:r.ImageURL||r.image||'',current:Number(r.CurrentPriceBRL??r.current??0)||0,originalPrice:Number(r.OriginalPriceBRL??r.originalPrice??r.CurrentPriceBRL??r.current??0)||0,store:r.CheapestStore||r.store||'',link:r.BestOfferURL||r.link||'',search:r.SearchPhrase||r.search||'',purchased:String(r.Status||r.status||'').toLowerCase()==='purchased',selected:String(r.Selected||'').toLowerCase()==='yes',checkedAt:r.PriceChecked||today(),notes:r.Notes||r.notes||'',offers:parseJson(r.OffersJSON,[]),history:parseJson(r.HistoryJSON,[])})).filter(x=>x.name)}else{throw Error('Excel support unavailable. Open this app with internet access to load the spreadsheet library.')};items=[...data,...items];persist();render();toast('Imported '+data.length+' products')}catch(err){toast('Import failed: '+err.message)}e.target.value=''};
 function parseJson(s,d){try{return JSON.parse(s||'')}catch{return d}}
 render();
+// Refresh on the browser's first completed paint and when returning to this tab.
+// This also handles browsers that restore a local page from the back-forward cache.
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render,{once:true});
+window.addEventListener('pageshow',()=>{try{const saved=readSavedItems();if(saved.length>items.length)items=saved;}catch(e){}render()});
 })();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
