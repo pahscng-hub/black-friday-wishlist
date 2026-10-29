@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Wishlist — Black Friday 2026 · v10.5.0</title>
+<title>Wishlist — Black Friday 2026 · v10.6.0</title>
 <style>
 :root{--bg:#f5f5f7;--card:#fff;--ink:#1d1d1f;--muted:#77777d;--line:#e6e6eb;--blue:#0071e3;--green:#18864b;--red:#c93434;--shadow:0 8px 28px rgba(20,20,35,.055)}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif}button,input,select,textarea{font:inherit}input,select,textarea{color:var(--ink);color-scheme:light}input::placeholder,textarea::placeholder{color:#8a8a91;opacity:1}input:-webkit-autofill{-webkit-text-fill-color:var(--ink);box-shadow:0 0 0 1000px #fff inset}button{cursor:pointer;border:0;border-radius:999px;padding:10px 15px;font-weight:600;transition:.15s}button:hover{filter:brightness(.96);transform:translateY(-1px)}.primary{background:var(--blue);color:white}.secondary{background:#ececf0;color:var(--ink)}.quiet{background:transparent;color:var(--blue);padding:7px 8px}.danger{background:#fff0f0;color:var(--red)}a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
@@ -21,8 +21,8 @@
 <body>
 <div class="shell">
 <header class="top">
- <div><div class="eyebrow">Your personal shopping planner · 2026</div><h1>Black Friday Wishlist<span style="color:var(--blue)">.</span></h1><p class="subtitle">Track original prices, check current prices, and compare offers across the web.</p><div class="version-label" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:4px 9px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font-size:11px;font-weight:650">APP VERSION <strong style="color:var(--blue)">10.5.0</strong> · PRICE TRACKING</div></div>
- <div class="top-actions"><button class="primary" id="addBtn">＋ Add product</button><input type="file" id="importFile" accept=".xlsx,.xls,.csv" hidden></div>
+ <div><div class="eyebrow">Your personal shopping planner · 2026</div><h1>Black Friday Wishlist<span style="color:var(--blue)">.</span></h1><p class="subtitle">Track original prices, check current prices, and compare offers across the web.</p><div class="version-label" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:4px 9px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font-size:11px;font-weight:650">APP VERSION <strong style="color:var(--blue)">10.6.0</strong> · PRICE TRACKING</div></div>
+ <div class="top-actions"><button class="secondary" id="importBackupBtn">Import backup</button><button class="secondary" id="exportBackupBtn">Export backup</button><button class="secondary" id="importSheetBtn">Import Excel/CSV</button><button class="primary" id="addBtn">＋ Add product</button><input type="file" id="importFile" accept=".json,.xlsx,.xls,.csv" hidden></div>
 </header>
 <div id="workerServiceConfig" hidden aria-hidden="true">
  <span id="workerConfigStatus">Price lookup service</span>
@@ -39,7 +39,7 @@
  <div class="budget-head"><strong>Budget tracker</strong><span id="budgetPercent">0% used</span></div><div class="track"><div class="fill" id="budgetFill"></div></div>
  <div class="budget-foot"><span id="budgetLeftLabel">R$ 1.500,00 available</span><span id="budgetRightLabel">R$ 1.500,00 budget</span></div>
 </section>
-<div class="toolbar"><h2>Your items <span id="itemCount" style="font-size:14px;color:var(--muted);font-weight:500">(0)</span></h2><div class="tools"><select class="searchbox" id="sortProducts" aria-label="Sort products" style="min-width:155px"><option value="manual">Custom order · drag to reorder</option><option value="recent">Recently added</option><option value="name">Name A–Z</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="priority">Priority: high to low</option></select><button class="secondary" id="checkAllPricesBtn">↻ Check all prices</button><button class="secondary" id="exportBtn">Export Excel ↗</button></div></div>
+<div class="toolbar"><h2>Your items <span id="itemCount" style="font-size:14px;color:var(--muted);font-weight:500">(0)</span></h2><div class="tools"><select class="searchbox" id="sortProducts" aria-label="Sort products" style="min-width:155px"><option value="manual">Custom order · drag to reorder</option><option value="recent">Recently added</option><option value="name">Name A–Z</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="priority">Priority: high to low</option></select><button class="secondary" id="checkAllPricesBtn">↻ Check all prices</button><button class="secondary" id="exportBtn">Export Excel / CSV ↗</button></div></div>
 <div hidden aria-hidden="true"><input id="filterSearch" value=""><select id="categoryFilter"><option value="all">All categories</option></select></div>
 <p class="drag-hint" id="dragHint">↕ Drag products to arrange your own order. Your order is saved automatically.</p><section class="grid" id="itemsGrid"></section>
 <p class="note" id="bulkCheckStatus">Discount is calculated against the original price recorded when each product was added. If configured, the price lookup bridge can fetch store product metadata and search Mercado Livre; store restrictions may still prevent some prices from loading.</p>
@@ -268,9 +268,55 @@ $('checkAllPricesBtn').onclick=async()=>{
 };
 function showHistory(id){let i=items.find(x=>x.id===id);if(!i)return;let h=[...(i.history||[])].sort((a,b)=>b.date.localeCompare(a.date));$('historyContent').innerHTML=h.length?`<div class="history">${h.map(x=>`<div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:9px 0"><span>${esc(x.date)} · ${esc(x.store||'Price check')}</span><strong style="color:var(--ink)">${money(x.price)}</strong></div>`).join('')}</div>`:'<p class="subtitle">No price history yet. Save a current price to start tracking. The original price is captured on the first save.</p>';open('historyModal')}
 $('exportBtn').onclick=exportExcel;
-function exportExcel(){let rows=items.map(i=>({Name:i.name,Category:i.category||'Other',Priority:['','Low','Medium','High'][Number(i.priority)||1],ImageURL:i.image,OriginalPriceBRL:i.originalPrice??i.current,CurrentPriceBRL:i.current,CheapestStore:i.store,BestOfferURL:i.link,Selected:i.selected?'Yes':'No',PriceChecked:i.checkedAt,OffersJSON:JSON.stringify(i.offers||[]),HistoryJSON:JSON.stringify(i.history||[])}));if(window.XLSX){let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Wishlist');let h=items.flatMap(i=>(i.history||[]).map(x=>({Product:i.name,Date:x.date,PriceBRL:x.price,Store:x.store||''})));XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(h),'Price History');XLSX.writeFile(wb,'black-friday-wishlist.xlsx')}else{let cols=Object.keys(rows[0]||{Name:'',OriginalPriceBRL:'',CurrentPriceBRL:''});let csv=[cols.join(','),...rows.map(r=>cols.map(k=>JSON.stringify(r[k]??'')).join(','))].join('\n');downloadBlob(csv,'black-friday-wishlist.csv','text/csv;charset=utf-8;');toast('Excel library unavailable; exported CSV instead')}}
-function downloadBlob(content,name,type){let a=document.createElement('a'),u=URL.createObjectURL(new Blob([content],{type}));a.href=u;a.download=name;a.click();URL.revokeObjectURL(u)}
-$('importFile').onchange=async e=>{let file=e.target.files[0];if(!file)return;try{let data;if(window.XLSX){let wb=XLSX.read(await file.arrayBuffer(),{type:'array'});let rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames.includes('Wishlist')?'Wishlist':wb.SheetNames[0]]);data=rows.map(r=>({id:String(Date.now())+Math.random().toString(16).slice(2,7),name:r.Name||r.name||r.Product||'',category:r.Category||r.category||'Other',priority:({Low:1,Medium:2,High:3}[r.Priority]||Number(r.priority)||1),createdAt:Date.now(),image:r.ImageURL||r.image||'',current:Number(r.CurrentPriceBRL??r.current??0)||0,originalPrice:Number(r.OriginalPriceBRL??r.originalPrice??r.CurrentPriceBRL??r.current??0)||0,store:r.CheapestStore||r.store||'',link:r.BestOfferURL||r.link||'',search:r.SearchPhrase||r.search||'',purchased:String(r.Status||r.status||'').toLowerCase()==='purchased',selected:String(r.Selected||'').toLowerCase()==='yes',checkedAt:r.PriceChecked||today(),notes:r.Notes||r.notes||'',offers:parseJson(r.OffersJSON,[]),history:parseJson(r.HistoryJSON,[])})).filter(x=>x.name)}else{throw Error('Excel support unavailable. Open this app with internet access to load the spreadsheet library.')};items=[...data,...items];persist();render();toast('Imported '+data.length+' products')}catch(err){toast('Import failed: '+err.message)}e.target.value=''};
+$('exportBackupBtn').onclick=exportBackup;
+$('importBackupBtn').onclick=()=>{ $('importFile').dataset.mode='backup'; $('importFile').click(); };
+$('importSheetBtn').onclick=()=>{ $('importFile').dataset.mode='sheet'; $('importFile').click(); };
+function exportBackup(){
+  const payload={format:'black-friday-wishlist-backup',version:1,appVersion:'10.6.0',exportedAt:new Date().toISOString(),budget,items};
+  downloadBlob(JSON.stringify(payload,null,2),'black-friday-wishlist-backup.json','application/json;charset=utf-8');
+  toast('Backup downloaded · '+items.length+' products');
+}
+function exportExcel(){
+  const rows=items.map(i=>({Name:i.name,Category:i.category||'Other',Priority:['','Low','Medium','High'][Number(i.priority)||1],ImageURL:i.image||'',OriginalPriceBRL:i.originalPrice??i.current??0,CurrentPriceBRL:i.current??0,CheapestStore:i.store||'',BestOfferURL:i.link||'',Selected:i.selected?'Yes':'No',PriceChecked:i.checkedAt||'',OffersJSON:JSON.stringify(i.offers||[]),HistoryJSON:JSON.stringify(i.history||[]),Order:i.order??''}));
+  try{
+    if(window.XLSX){const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{Name:''}]),'Wishlist');const h=items.flatMap(i=>(i.history||[]).map(x=>({Product:i.name,Date:x.date,PriceBRL:x.price,Store:x.store||''})));XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(h.length?h:[{Product:'',Date:'',PriceBRL:'',Store:''}]),'Price History');XLSX.writeFile(wb,'black-friday-wishlist.xlsx');toast('Excel file downloaded');return;}
+  }catch(err){console.warn('XLSX export failed; using CSV',err)}
+  const cols=Object.keys(rows[0]||{Name:'',CurrentPriceBRL:''});
+  const csvCell=v=>{let x=String(v??'');return '"'+x.replace(/"/g,'""')+'"'};
+  const csv='\ufeff'+[cols.map(csvCell).join(','),...rows.map(r=>cols.map(k=>csvCell(r[k])).join(','))].join('\r\n');
+  downloadBlob(csv,'black-friday-wishlist.csv','text/csv;charset=utf-8;');toast('Excel library unavailable · CSV exported instead');
+}
+function downloadBlob(content,name,type){
+  const blob=new Blob([content],{type}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;a.style.display='none';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);
+}
+function normalizeImportedRow(r,index){return {id:String(Date.now())+Math.random().toString(16).slice(2,7)+index,name:r.Name||r.name||r.Product||r.product||'',category:r.Category||r.category||'Other',priority:({Low:1,Medium:2,High:3}[r.Priority]||Number(r.priority)||1),createdAt:Date.now(),image:r.ImageURL||r.image||'',current:Number(r.CurrentPriceBRL??r.current??r.price??0)||0,originalPrice:Number(r.OriginalPriceBRL??r.originalPrice??r.CurrentPriceBRL??r.current??0)||0,store:r.CheapestStore||r.store||'',link:r.BestOfferURL||r.link||'',search:r.SearchPhrase||r.search||'',purchased:String(r.Status||r.status||'').toLowerCase()==='purchased',selected:String(r.Selected||'').toLowerCase()==='yes'||r.selected===true,checkedAt:r.PriceChecked||r.checkedAt||today(),notes:r.Notes||r.notes||'',offers:parseJson(r.OffersJSON??r.offers,[]),history:parseJson(r.HistoryJSON??r.history,[])};}
+$('importFile').onchange=async e=>{
+  const file=e.target.files[0];if(!file)return;
+  try{
+    const ext=file.name.split('.').pop().toLowerCase();let imported=[],backup=null;
+    if(ext==='json'){
+      const parsed=JSON.parse(await file.text());
+      if(Array.isArray(parsed))backup={items:parsed};else if(parsed&&Array.isArray(parsed.items))backup=parsed;else throw Error('This JSON file is not a recognized wishlist backup.');
+      imported=backup.items;
+      if(!confirm('Restore '+imported.length+' products from this backup? This replaces the current wishlist in this browser. Export a backup of the current list first if you want to keep it.'))return;
+      items=imported; if(Number(backup.budget)>0)budget=Number(backup.budget); persist();
+      toast('Restored '+items.length+' products from backup');
+    }else{
+      let rows=[];
+      if(ext==='csv'){
+        const text=await file.text();rows=parseCSV(text.replace(/^\ufeff/,''));
+      }else if(window.XLSX){const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});const sheet=wb.Sheets[wb.SheetNames.includes('Wishlist')?'Wishlist':wb.SheetNames[0]];rows=XLSX.utils.sheet_to_json(sheet||{});}
+      else throw Error('Excel import needs internet access for the spreadsheet library. Use Import backup for JSON files, or import a CSV.');
+      imported=rows.map(normalizeImportedRow).filter(x=>x.name);items=[...imported,...items];persist();toast('Imported '+imported.length+' products');
+    }
+    render();
+  }catch(err){toast('Import failed: '+err.message)}finally{e.target.value='';delete e.target.dataset.mode;}
+};
+function parseCSV(text){
+  const rows=[];let row=[],cell='',quoted=false;
+  for(let i=0;i<text.length;i++){const c=text[i],n=text[i+1];if(quoted){if(c==='"'&&n==='"'){cell+='"';i++}else if(c==='"')quoted=false;else cell+=c;}else if(c==='"')quoted=true;else if(c===','){row.push(cell);cell=''}else if(c==='\n'){row.push(cell);rows.push(row);row=[];cell=''}else if(c!=='\r')cell+=c;}
+  if(cell.length||row.length){row.push(cell);rows.push(row)}if(!rows.length)return [];const headers=rows.shift().map(x=>x.trim());return rows.filter(r=>r.some(v=>v!=='')).map(r=>Object.fromEntries(headers.map((h,i)=>[h,r[i]??''])));
+};
 function parseJson(s,d){try{return JSON.parse(s||'')}catch{return d}}
 render();
 // Refresh on the browser's first completed paint and when returning to this tab.
